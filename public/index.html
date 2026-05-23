@@ -1,0 +1,1688 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sherlock — The Final Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=JetBrains+Mono:wght@300;400;500&family=Libre+Baskerville:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────── */
+:root {
+  --void:    #080807;
+  --ink:     #0e0e0c;
+  --paper:   #f0ebe0;
+  --muted:   #8a8680;
+  --faint:   rgba(240,235,224,0.12);
+  --faint2:  rgba(240,235,224,0.06);
+  --acid:    #c8f542;
+  --signal:  #5ad4e8;
+  --ember:   #ff4a35;
+  --gold:    #e8c96a;
+  --mono:    'JetBrains Mono', ui-monospace, monospace;
+  --serif:   'Playfair Display', 'Georgia', serif;
+  --body:    'Libre Baskerville', 'Georgia', serif;
+  --ease:    cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* ─── RESET ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--void);
+  color: var(--paper);
+  font-family: var(--body);
+  overflow-x: hidden;
+  cursor: none;
+}
+button, input { font: inherit; cursor: none; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+code { overflow-wrap: anywhere; }
+
+/* ─── CUSTOM CURSOR ──────────────────────────────────── */
+#cursor {
+  position: fixed; top: 0; left: 0; z-index: 9999;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+#cursor-dot {
+  position: fixed; top: -4px; left: -4px;
+  width: 8px; height: 8px;
+  background: var(--acid);
+  border-radius: 50%;
+  transition: transform 0.1s;
+  pointer-events: none;
+  z-index: 9999;
+}
+#cursor-ring {
+  position: fixed; top: -20px; left: -20px;
+  width: 40px; height: 40px;
+  border: 1px solid rgba(200,245,66,0.5);
+  border-radius: 50%;
+  transition: transform 0.25s var(--ease), width 0.3s, height 0.3s, top 0.3s, left 0.3s, border-color 0.3s;
+  pointer-events: none;
+  z-index: 9999;
+}
+body.cursor-hover #cursor-ring {
+  width: 64px; height: 64px;
+  top: -32px; left: -32px;
+  border-color: var(--acid);
+}
+
+/* ─── LOADER ─────────────────────────────────────────── */
+#loader {
+  position: fixed; inset: 0; z-index: 8000;
+  background: var(--void);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 48px;
+  transition: opacity 0.9s var(--ease), visibility 0.9s;
+}
+#loader.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.loader-eyeline {
+  display: flex; align-items: center; gap: 24px;
+  font-family: var(--mono); font-size: 0.68rem;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.2em;
+}
+.loader-number {
+  font-family: var(--serif);
+  font-size: clamp(5rem, 14vw, 12rem);
+  font-weight: 900;
+  line-height: 0.85;
+  color: var(--paper);
+  opacity: 0;
+  transform: translateY(60px);
+  animation: loaderRise 1.4s var(--ease) 0.2s forwards;
+}
+.loader-sub {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.25em;
+  text-transform: uppercase; color: var(--muted);
+  opacity: 0; animation: loaderFade 1s ease 1s forwards;
+}
+.loader-bar {
+  width: 240px; height: 1px;
+  background: var(--faint);
+  position: relative; overflow: hidden;
+}
+.loader-bar::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--acid);
+  transform: translateX(-100%);
+  animation: loaderSlide 1.8s var(--ease) 0.4s forwards;
+}
+.loader-enter {
+  font-family: var(--mono); font-size: 0.78rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--acid);
+  border: 1px solid rgba(200,245,66,0.4);
+  padding: 14px 32px;
+  background: transparent;
+  cursor: none;
+  opacity: 0;
+  animation: loaderFade 0.8s ease 2.2s forwards;
+  transition: background 0.3s, color 0.3s;
+}
+.loader-enter:hover { background: var(--acid); color: var(--void); }
+
+@keyframes loaderRise {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes loaderFade {
+  to { opacity: 1; }
+}
+@keyframes loaderSlide {
+  to { transform: translateX(0); }
+}
+
+/* ─── GRAIN OVERLAY ──────────────────────────────────── */
+#grain {
+  position: fixed; inset: 0; z-index: 7000; pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: screen;
+  animation: grainShift 0.4s steps(1) infinite;
+}
+@keyframes grainShift {
+  0%   { background-position: 0 0; }
+  25%  { background-position: -60px 20px; }
+  50%  { background-position: 30px -40px; }
+  75%  { background-position: -20px 60px; }
+  100% { background-position: 50px -10px; }
+}
+
+/* ─── MAIN SHELL ─────────────────────────────────────── */
+#app { opacity: 0; transition: opacity 1.2s var(--ease); }
+#app.visible { opacity: 1; }
+
+/* ─── TOP BAR ────────────────────────────────────────── */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--faint);
+  background: rgba(8,8,7,0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateY(-64px);
+  transition: transform 0.8s var(--ease) 0.4s;
+}
+#app.visible #topbar { transform: translateY(0); }
+
+.brand {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 16px;
+}
+.brand-glyph {
+  width: 32px; height: 32px;
+  border: 1px solid var(--faint2);
+  background: var(--faint2);
+  display: grid; place-items: center;
+  font-size: 0.6rem; color: var(--acid); letter-spacing: 0;
+}
+.brand-name { color: var(--muted); }
+.brand-case { color: var(--paper); }
+
+.top-status {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--acid);
+  animation: breathe 2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+/* ─── SCENE COUNTER (aboutluca style) ───────────────── */
+#scene-counter {
+  position: fixed; right: 36px; top: 50%;
+  transform: translateY(-50%);
+  z-index: 400;
+  display: flex; flex-direction: column; gap: 12px;
+  opacity: 0; transition: opacity 0.6s;
+}
+#app.visible #scene-counter { opacity: 1; }
+
+.sc-item {
+  font-family: var(--mono); font-size: 0.6rem;
+  color: var(--muted); letter-spacing: 0.1em;
+  display: flex; align-items: center; gap: 8px;
+  cursor: none; transition: color 0.3s;
+}
+.sc-item.active { color: var(--acid); }
+.sc-item .sc-line {
+  width: 20px; height: 1px;
+  background: var(--muted);
+  transition: background 0.3s, width 0.4s var(--ease);
+}
+.sc-item.active .sc-line { background: var(--acid); width: 36px; }
+
+/* ─── HERO — CHAPTER 0 ───────────────────────────────── */
+#chapter-hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 40px 40px 80px;
+  position: relative; overflow: hidden;
+}
+
+.hero-canvas-wrap {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0;
+}
+#waveCanvas {
+  width: 100%; height: 100%;
+  display: block; opacity: 0.55;
+}
+
+.hero-content { position: relative; z-index: 2; max-width: 1100px; }
+
+.hero-eyebrow {
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--acid); margin-bottom: 32px;
+  opacity: 0; transform: translateY(20px);
+  transition: all 0.8s var(--ease) 0.2s;
+}
+#app.visible .hero-eyebrow { opacity: 1; transform: none; }
+
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(4rem, 10vw, 9.5rem);
+  line-height: 0.88;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 40px;
+  opacity: 0; transform: translateY(40px);
+  transition: all 1s var(--ease) 0.4s;
+}
+#app.visible .hero-title { opacity: 1; transform: none; }
+
+.hero-title em {
+  font-style: italic; color: transparent;
+  -webkit-text-stroke: 2px var(--paper);
+}
+.hero-title .accent { color: var(--acid); -webkit-text-stroke: 0; }
+
+.hero-foot {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;
+  border-top: 1px solid var(--faint); padding-top: 32px;
+  opacity: 0; transform: translateY(20px);
+  transition: all 0.9s var(--ease) 0.7s;
+}
+#app.visible .hero-foot { opacity: 1; transform: none; }
+
+.hero-brief {
+  max-width: 520px;
+  font-size: 1rem; line-height: 1.75; color: var(--muted);
+}
+.hero-brief strong { color: var(--paper); font-weight: normal; }
+
+.hero-cta {
+  flex-shrink: 0;
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  border: 1px solid var(--faint);
+  padding: 16px 32px;
+  background: transparent; color: var(--paper);
+  transition: border-color 0.3s, color 0.3s, background 0.3s;
+  white-space: nowrap;
+}
+.hero-cta:hover { border-color: var(--acid); color: var(--acid); }
+
+/* ─── CASE BRIEF ─────────────────────────────────────── */
+#chapter-brief {
+  padding: 120px 40px;
+  position: relative; overflow: hidden;
+}
+.brief-inner { max-width: 1200px; margin: 0 auto; }
+
+.section-label {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 64px;
+  display: flex; align-items: center; gap: 20px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--faint);
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--faint);
+  border: 1px solid var(--faint);
+  margin-bottom: 80px;
+}
+.brief-card {
+  background: var(--void);
+  padding: 40px 32px;
+  position: relative; overflow: hidden;
+}
+.brief-card::before {
+  content: attr(data-num);
+  position: absolute; top: 24px; right: 24px;
+  font-family: var(--serif); font-size: 4rem; font-weight: 900;
+  color: var(--faint2); line-height: 1;
+  pointer-events: none;
+}
+.brief-card h3 {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--signal); margin-bottom: 20px;
+}
+.brief-card p { color: var(--muted); line-height: 1.7; font-size: 0.95rem; }
+
+.brief-quote {
+  border-left: 2px solid var(--gold);
+  padding: 24px 32px;
+  font-family: var(--serif);
+  font-size: 1.3rem; font-style: italic;
+  color: var(--paper); line-height: 1.6;
+  background: var(--faint2);
+}
+.brief-quote cite {
+  display: block; margin-top: 16px;
+  font-style: normal; font-size: 0.75rem; font-family: var(--mono);
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
+}
+
+/* ─── ATTACK FLOW ────────────────────────────────────── */
+#chapter-flow {
+  padding: 120px 40px;
+  background: var(--ink);
+}
+.flow-inner { max-width: 1200px; margin: 0 auto; }
+
+.flow-title {
+  font-family: var(--serif);
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 900; line-height: 0.92;
+  margin-bottom: 80px;
+}
+.flow-title em { font-style: italic; color: var(--acid); }
+
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  position: relative;
+}
+.flow-steps::before {
+  content: ''; position: absolute;
+  top: 28px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, var(--acid), var(--signal), var(--ember));
+  opacity: 0.3;
+}
+.flow-step {
+  padding: 72px 24px 32px;
+  position: relative;
+}
+.flow-step::before {
+  content: attr(data-n);
+  position: absolute; top: 14px; left: 24px;
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.15em; color: var(--acid);
+  text-transform: uppercase;
+}
+.flow-step::after {
+  content: '';
+  position: absolute; top: 24px; left: 24px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--void); border: 1px solid var(--acid);
+}
+.flow-step h4 {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--paper); margin-bottom: 12px;
+}
+.flow-step p { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+
+/* ─── CONSOLE CHAPTER ────────────────────────────────── */
+#chapter-console {
+  padding: 120px 0 0;
+  position: relative;
+}
+.console-intro {
+  padding: 0 40px 80px;
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: end;
+}
+.console-intro-title {
+  font-family: var(--serif);
+  font-size: clamp(2.8rem, 5vw, 5.5rem);
+  font-weight: 900; line-height: 0.9;
+}
+.console-intro-title span { display: block; }
+.console-intro-title .ital { font-style: italic; color: var(--gold); }
+
+.console-intro-aside {
+  padding-bottom: 8px;
+}
+.console-intro-aside p {
+  color: var(--muted); line-height: 1.7; margin-bottom: 24px;
+}
+.console-intro-aside .hint-tag {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--acid); border: 1px solid rgba(200,245,66,0.25);
+  padding: 8px 14px; display: inline-block;
+}
+
+/* ─── FULL TERMINAL ──────────────────────────────────── */
+.terminal-shell {
+  border-top: 1px solid var(--faint);
+  background: #060605;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 680px;
+  overflow: hidden;
+}
+
+.terminal-main {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--faint);
+  min-width: 0;
+}
+
+.term-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--faint);
+  font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+.term-traffic {
+  display: flex; gap: 8px;
+}
+.t-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.t-dot.r { background: #ff5f56; }
+.t-dot.y { background: #ffbd2e; }
+.t-dot.g { background: #27c93f; }
+
+.term-log {
+  flex: 1; overflow-y: auto; padding: 24px;
+  font-family: var(--mono); font-size: 0.82rem; line-height: 1.65;
+  min-height: 480px; max-height: 560px;
+  scrollbar-width: thin; scrollbar-color: var(--faint) transparent;
+}
+.term-log::-webkit-scrollbar { width: 4px; }
+.term-log::-webkit-scrollbar-thumb { background: var(--faint); }
+
+.term-line { display: block; white-space: pre-wrap; word-break: break-all; }
+.term-banner {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: min(426px, 100%); box-sizing: border-box; padding: 6px 22px;
+  border: 1px solid var(--muted); color: var(--acid);
+  font-family: var(--mono); line-height: 1.2; white-space: nowrap;
+}
+.term-line.dim    { color: var(--muted); }
+.term-line.good   { color: var(--acid); }
+.term-line.info   { color: var(--signal); }
+.term-line.warn   { color: var(--gold); }
+.term-line.bad    { color: var(--ember); }
+.term-line.violet { color: #c084fc; }
+.term-line.gap    { display: block; height: 8px; }
+
+.term-input-row {
+  display: flex; align-items: center; gap: 12px;
+  border-top: 1px solid var(--faint);
+  padding: 16px 24px;
+  font-family: var(--mono);
+}
+.prompt { color: var(--acid); font-size: 0.82rem; white-space: nowrap; flex-shrink: 0; }
+#termInput {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--paper); font-size: 0.82rem; caret-color: var(--acid);
+  font-family: var(--mono);
+}
+
+/* ─── SIDEBAR ─────────────────────────────────────────── */
+.terminal-side {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.side-tabs {
+  display: flex; border-bottom: 1px solid var(--faint);
+}
+.side-tab {
+  flex: 1; padding: 14px 12px;
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); background: transparent; border: none;
+  border-right: 1px solid var(--faint);
+  transition: color 0.3s, background 0.3s; cursor: none;
+}
+.side-tab:last-child { border-right: none; }
+.side-tab.active { color: var(--acid); background: var(--faint2); }
+
+.side-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.side-panel.active { display: flex; }
+
+/* Phases */
+.phase-list {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.phase {
+  border: 1px solid var(--faint);
+  padding: 16px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.4s;
+}
+.phase[data-done="true"] { border-color: rgba(200,245,66,0.4); }
+.phase[data-done="true"]::after {
+  content: '✓'; position: absolute; right: 12px; top: 12px;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--acid);
+}
+.phase-num {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.2em; color: var(--muted); margin-bottom: 6px;
+}
+.phase[data-done="true"] .phase-num { color: var(--acid); }
+.phase-title {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--paper); margin-bottom: 6px;
+}
+.phase-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+/* Hidden Request Log */
+.net-inspector { flex: 1; overflow-y: auto; padding: 20px; }
+.net-entry {
+  border-bottom: 1px solid var(--faint);
+  padding: 16px 0;
+  font-family: var(--mono); font-size: 0.75rem;
+}
+.net-entry:last-child { border-bottom: none; }
+.net-method-path {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 8px;
+  min-width: 0;
+}
+.net-method {
+  background: var(--faint); color: var(--acid);
+  padding: 2px 8px; font-size: 0.65rem;
+}
+.net-path { color: var(--paper); font-size: 0.72rem; overflow-wrap: anywhere; }
+.net-status {
+  font-size: 0.65rem; margin-bottom: 8px;
+}
+.net-status.ok { color: var(--acid); }
+.net-status.err { color: var(--ember); }
+.net-headers {
+  background: var(--faint2); padding: 10px;
+}
+.net-header-row {
+  display: flex; gap: 8px; margin-bottom: 3px;
+  min-width: 0;
+}
+.net-hname { color: var(--signal); min-width: 160px; }
+.net-hval { color: var(--muted); word-break: break-all; }
+.net-empty {
+  text-align: center; padding: 40px 20px;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  line-height: 1.8;
+}
+
+/* Quick Actions */
+.quick-section { padding: 16px 20px; border-bottom: 1px solid var(--faint); }
+.quick-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.action-btns { display: flex; flex-direction: column; gap: 6px; }
+.action-btn {
+  width: 100%; padding: 10px 14px;
+  background: var(--faint2); border: 1px solid var(--faint);
+  color: var(--muted); font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  text-align: left; transition: all 0.25s; cursor: none;
+}
+.action-btn:hover { border-color: var(--acid); color: var(--acid); background: rgba(200,245,66,0.04); }
+.action-btn.poison-btn { border-color: rgba(232,201,106,0.3); color: var(--gold); }
+.action-btn.poison-btn:hover { border-color: var(--gold); background: rgba(232,201,106,0.04); }
+.action-btn.final-btn { border-color: rgba(90,212,232,0.3); color: var(--signal); }
+.action-btn.final-btn:hover { border-color: var(--signal); background: rgba(90,212,232,0.04); }
+
+.meter-section { padding: 16px 20px; }
+.meter-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.pulse-container { display: flex; flex-direction: column; gap: 8px; }
+.pulse-bar {
+  height: 1px; width: 100%;
+  background: linear-gradient(90deg, var(--acid) 0%, transparent 100%);
+  transform-origin: left;
+  animation: pulseBar 2s ease-in-out infinite;
+}
+.pulse-bar:nth-child(2) { background: linear-gradient(90deg, var(--signal), transparent); animation-delay: 0.3s; }
+.pulse-bar:nth-child(3) { background: linear-gradient(90deg, var(--ember), transparent); animation-delay: 0.6s; }
+.pulse-bar:nth-child(4) { background: linear-gradient(90deg, var(--gold), transparent); animation-delay: 0.9s; }
+.pulse-bar:nth-child(5) { background: linear-gradient(90deg, #c084fc, transparent); animation-delay: 1.2s; }
+@keyframes pulseBar {
+  0%,100% { transform: scaleX(0.2); opacity: 0.3; }
+  50% { transform: scaleX(1); opacity: 0.9; }
+}
+
+/* ─── STATUS BAR ─────────────────────────────────────── */
+.status-bar {
+  border-top: 1px solid var(--faint);
+  padding: 12px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: 0.65rem; color: var(--muted);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--ink);
+}
+#cacheDisplay { color: var(--paper); }
+#statusDisplay { color: var(--acid); }
+
+/* ─── VICTORY ────────────────────────────────────────── */
+#victory-screen {
+  display: none;
+  padding: 160px 40px;
+  background: var(--void);
+  border-top: 1px solid var(--faint);
+  position: relative; overflow: hidden;
+}
+#victory-screen.show { display: block; }
+#victory-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(200,245,66,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.victory-inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+.victory-eyebrow {
+  font-family: var(--mono); font-size: 0.65rem;
+  letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--acid); margin-bottom: 40px;
+  display: flex; align-items: center; gap: 16px;
+}
+.victory-eyebrow::after {
+  content: ''; flex: 1; height: 1px; background: rgba(200,245,66,0.2);
+}
+.victory-title {
+  font-family: var(--serif);
+  font-size: clamp(3rem, 7vw, 7rem);
+  font-weight: 900; line-height: 0.88;
+  margin-bottom: 48px;
+  color: var(--paper);
+}
+.victory-title em { font-style: italic; color: var(--acid); }
+
+.flag-display {
+  border: 1px solid rgba(200,245,66,0.35);
+  background: rgba(200,245,66,0.04);
+  padding: 32px 40px;
+  margin-bottom: 48px;
+  position: relative;
+}
+.flag-label {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--acid); margin-bottom: 16px;
+}
+.flag-value {
+  font-family: var(--mono); font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+  color: var(--paper); word-break: break-all; letter-spacing: 0.05em;
+}
+.victory-body {
+  max-width: 680px;
+  font-family: var(--serif); font-size: 1.1rem;
+  line-height: 1.8; color: var(--muted); font-style: italic;
+}
+
+/* ─── FLASH ──────────────────────────────────────────── */
+.flash-overlay {
+  position: fixed; inset: 0; z-index: 3000;
+  pointer-events: none; display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+}
+.flash-overlay.active { animation: flashPop 1.8s var(--ease) forwards; }
+.flash-text {
+  font-family: var(--mono); font-size: 0.75rem;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  padding: 12px 24px;
+  border: 1px solid currentColor;
+  background: rgba(8,8,7,0.9);
+}
+.flash-overlay.cache-miss .flash-text { color: var(--signal); border-color: var(--signal); }
+.flash-overlay.cache-hit  .flash-text { color: var(--gold); border-color: var(--gold); }
+.flash-overlay.cache-poison .flash-text { color: var(--ember); border-color: var(--ember); }
+.flash-overlay.win-flash .flash-text { color: var(--acid); border-color: var(--acid); }
+@keyframes flashPop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  15%  { opacity: 1; transform: scale(1); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .brief-grid { grid-template-columns: repeat(2, 1fr); }
+  .flow-steps { grid-template-columns: repeat(3, 1fr); }
+  .console-intro { grid-template-columns: 1fr; gap: 40px; }
+}
+@media (max-width: 900px) {
+  #topbar { padding: 0 20px; }
+  .brand { gap: 10px; min-width: 0; }
+  .brand-name { display: none; }
+  .brand-case { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-status { max-width: 38vw; justify-content: flex-end; }
+  #topStatusText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chapter-hero { padding: 20px 20px 60px; min-height: 100svh; }
+  #chapter-brief, #chapter-flow { padding: 80px 20px; }
+  #chapter-console { padding: 80px 20px 0; }
+  .loader-eyeline { gap: 14px; padding: 0 20px; text-align: center; flex-wrap: wrap; justify-content: center; }
+  .hero-foot { flex-direction: column; align-items: flex-start; }
+  .hero-cta { width: 100%; text-align: center; }
+  .brief-grid { grid-template-columns: 1fr; }
+  .flow-steps { grid-template-columns: 1fr 1fr; }
+  .terminal-shell {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    border: 1px solid var(--faint);
+  }
+  .terminal-main { border-right: none; min-height: 0; }
+  .terminal-side { border-top: 1px solid var(--faint); max-height: none; min-height: 360px; }
+  .term-log {
+    min-height: 360px;
+    max-height: 58svh;
+    overscroll-behavior: contain;
+  }
+  .term-input-row {
+    position: sticky;
+    bottom: 0;
+    background: #060605;
+    z-index: 5;
+  }
+  .side-panel.active { min-height: 320px; }
+  .phase-list, .net-inspector { max-height: 52svh; }
+  .status-bar {
+    padding: 14px 20px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    line-height: 1.5;
+  }
+  #scene-counter { display: none; }
+}
+@media (max-width: 600px) {
+  body { cursor: auto; }
+  button, input, .sc-item, .side-tab, .action-btn { cursor: auto; }
+  #cursor-dot, #cursor-ring { display: none; }
+  #grain { opacity: 0.025; }
+  #topbar {
+    height: 58px;
+    padding: 0 14px;
+  }
+  .brand { font-size: 0.62rem; letter-spacing: 0.1em; }
+  .brand-glyph { width: 30px; height: 30px; flex: 0 0 auto; }
+  .top-status { max-width: 34vw; font-size: 0.56rem; letter-spacing: 0.08em; }
+  #chapter-hero { padding: 72px 16px 44px; }
+  #chapter-brief, #chapter-flow { padding: 64px 16px; }
+  #chapter-console { padding: 64px 10px 0; }
+  .section-label {
+    margin-bottom: 36px;
+    gap: 12px;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+  }
+  .flow-steps { grid-template-columns: 1fr; }
+  .flow-title { margin-bottom: 44px; }
+  .flow-step { padding: 56px 6px 24px 20px; }
+  .flow-step::before,
+  .flow-step::after { left: 20px; }
+  .hero-eyebrow {
+    margin-bottom: 24px;
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    line-height: 1.7;
+  }
+  .hero-title {
+    font-size: clamp(3rem, 16vw, 4rem);
+    letter-spacing: 0;
+    margin-bottom: 28px;
+  }
+  .hero-title em { -webkit-text-stroke-width: 1px; }
+  .hero-foot { gap: 24px; padding-top: 24px; }
+  .hero-brief { font-size: 0.92rem; line-height: 1.7; }
+  .hero-cta,
+  .loader-enter {
+    min-height: 48px;
+    padding: 14px 18px;
+    white-space: normal;
+    line-height: 1.4;
+  }
+  .brief-card { padding: 30px 22px; }
+  .brief-card::before { font-size: 3rem; top: 18px; right: 18px; }
+  .brief-quote { padding: 20px; font-size: 1.04rem; }
+  .console-intro {
+    padding: 0 6px 36px;
+    gap: 28px;
+  }
+  .console-intro-title { font-size: clamp(2.6rem, 13vw, 3.6rem); }
+  .console-intro-aside p { font-size: 0.92rem; }
+  .console-intro-aside .hint-tag {
+    max-width: 100%;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    line-height: 1.5;
+  }
+  .terminal-shell {
+    border-left: none;
+    border-right: none;
+    margin-inline: -10px;
+  }
+  .term-bar {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 12px 14px;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+  .term-bar > span:first-of-type {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #cacheDisplay {
+    grid-column: 1 / -1;
+    padding-top: 2px;
+    font-size: 0.56rem;
+  }
+  .term-log {
+    min-height: 330px;
+    max-height: 56svh;
+    padding: 16px 14px;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .term-line {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .term-banner {
+    width: 100%;
+    padding: 8px 10px;
+    white-space: normal;
+    text-align: center;
+  }
+  .term-input-row {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  }
+  .prompt { font-size: 0.68rem; padding-top: 4px; }
+  #termInput {
+    min-width: 0;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .side-tabs { overflow-x: auto; scrollbar-width: none; }
+  .side-tabs::-webkit-scrollbar { display: none; }
+  .side-tab {
+    flex: 0 0 50%;
+    min-height: 46px;
+    padding: 12px 8px;
+    font-size: 0.56rem;
+    letter-spacing: 0.08em;
+  }
+  .terminal-side { min-height: 340px; }
+  .side-panel.active { min-height: 300px; }
+  .phase-list, .net-inspector {
+    padding: 14px;
+    max-height: 48svh;
+  }
+  .phase { padding: 14px; }
+  .phase-desc { font-size: 0.74rem; }
+  .net-entry { font-size: 0.68rem; }
+  .net-method-path,
+  .net-header-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .net-hname { min-width: 0; }
+  .quick-section,
+  .meter-section { padding: 14px; }
+  .action-btn {
+    min-height: 46px;
+    padding: 12px;
+    font-size: 0.58rem;
+    line-height: 1.45;
+    letter-spacing: 0.05em;
+  }
+  .status-bar {
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+  .flash-text {
+    max-width: calc(100vw - 32px);
+    text-align: center;
+    line-height: 1.6;
+    letter-spacing: 0.14em;
+  }
+  #victory-screen { padding: 80px 16px; }
+  .victory-eyebrow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    line-height: 1.6;
+  }
+  .victory-eyebrow::after { width: 100%; flex: none; }
+  .victory-title { font-size: clamp(3rem, 15vw, 4.2rem); }
+  .flag-display { padding: 22px 16px; }
+  .flag-value { font-size: 0.82rem; line-height: 1.6; }
+  .victory-body { font-size: 1rem; line-height: 1.7; }
+}
+@media (hover: none), (pointer: coarse) {
+  body { cursor: auto; }
+  button, input, .sc-item, .side-tab, .action-btn { cursor: auto; }
+  #cursor-dot, #cursor-ring { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Grain -->
+<div id="grain" aria-hidden="true"></div>
+
+<!-- Flash Overlay -->
+<div class="flash-overlay" id="flashOverlay" aria-live="assertive">
+  <div class="flash-text" id="flashText"></div>
+</div>
+
+<!-- ─── LOADER ──────────────────────────────── -->
+<div id="loader" role="status" aria-label="Loading">
+  <div class="loader-eyeline">
+    <span>Case File 01</span>
+    <span>—</span>
+    <span>Baker Street Signal Office</span>
+  </div>
+  <div class="loader-number">221B</div>
+  <div class="loader-sub">Initialising Moriarty Relay…</div>
+  <div class="loader-bar"></div>
+  <button class="loader-enter" id="loaderEnter" onclick="enterLab()">Enter the Case</button>
+</div>
+
+<!-- ─── APP ────────────────────────────────── -->
+<div id="app">
+
+  <!-- Top Bar -->
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-glyph">221B</div>
+      <span class="brand-name">Baker Street</span>
+      <span>—</span>
+      <span class="brand-case">The Final Problem</span>
+    </div>
+    <div class="top-status">
+      <span class="status-dot"></span>
+      <span id="topStatusText">Relay Online · Integrity Warning</span>
+    </div>
+  </header>
+
+  <!-- Scene Counter -->
+  <nav id="scene-counter" aria-label="Section navigation">
+    <div class="sc-item active" data-target="chapter-hero">
+      <div class="sc-line"></div>
+      <span>Origin</span>
+    </div>
+    <div class="sc-item" data-target="chapter-brief">
+      <div class="sc-line"></div>
+      <span>Brief</span>
+    </div>
+    <div class="sc-item" data-target="chapter-flow">
+      <div class="sc-line"></div>
+      <span>Attack</span>
+    </div>
+    <div class="sc-item" data-target="chapter-console">
+      <div class="sc-line"></div>
+      <span>Console</span>
+    </div>
+  </nav>
+
+  <!-- ─── CHAPTER 0: HERO ──────────────────── -->
+  <section id="chapter-hero">
+    <div class="hero-canvas-wrap" aria-hidden="true">
+      <canvas id="waveCanvas"></canvas>
+    </div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Hard Case 01 · Cache Poisoning · Host Header Injection</div>
+      <h1 class="hero-title">
+        Sherlock:<br>
+        <em>The Final</em><br>
+        <span class="accent">Problem.</span>
+      </h1>
+      <div class="hero-foot">
+        <p class="hero-brief">
+          Moriarty has infiltrated the Baker Street relay.
+          <strong>Sherlock sends one message. Watson receives another.</strong>
+          The archive trusts the very headers a client can shape.
+          Find the disagreement. Poison the truth. Claim the archive.
+        </p>
+        <button class="hero-cta" onclick="document.getElementById('chapter-console').scrollIntoView({behavior:'smooth'})">
+          Open the Console ↓
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CHAPTER 1: CASE BRIEF ────────────── -->
+  <section id="chapter-brief">
+    <div class="brief-inner">
+      <div class="section-label">Case Intelligence</div>
+      <div class="brief-grid">
+        <div class="brief-card" data-num="01">
+          <h3>Objective</h3>
+          <p>Poison the shared message cache so an ordinary request receives a privileged archive response with a leaked session token.</p>
+        </div>
+        <div class="brief-card" data-num="02">
+          <h3>Vulnerability</h3>
+          <p>The relay trusts <code>X-Forwarded-Host</code> for privilege decisions while keying the cache on the public <code>Host</code> header—two different trust domains.</p>
+        </div>
+        <div class="brief-card" data-num="03">
+          <h3>Fingerprint</h3>
+          <p>Watch <code>X-BakerStreet-Cache</code> and <code>X-BakerStreet-Cache-Key</code> response headers. They tell you whose response you are actually receiving.</p>
+        </div>
+        <div class="brief-card" data-num="04">
+          <h3>Final Gate</h3>
+          <p>The archive at <code>/api/v2/archive/final</code> demands the admin host context <em>and</em> a valid session token leaked by the poisoned response.</p>
+        </div>
+      </div>
+      <div class="brief-quote">
+        "The message you received was not the one I sent. Observe the seal, not merely the letter—hosts, proxies, and caches all leave fingerprints."
+        <cite>— Sherlock Holmes, Baker Street Relay Transmission</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CHAPTER 2: ATTACK FLOW ───────────── -->
+  <section id="chapter-flow">
+    <div class="flow-inner">
+      <div class="section-label">Attack Architecture</div>
+      <h2 class="flow-title">
+        Five steps.<br>
+        One <em>poisoned</em> truth.
+      </h2>
+      <div class="flow-steps">
+        <div class="flow-step" data-n="Step 01">
+          <h4>Observe</h4>
+          <p>Read <code>/api/v2/messages/latest</code>. Notice the cache metadata and the observed host the relay reports.</p>
+        </div>
+        <div class="flow-step" data-n="Step 02">
+          <h4>Diagnose</h4>
+          <p>Inspect <code>/api/v2/relay/diagnostics</code> to understand how cache keys are constructed and where the split trust boundary lies.</p>
+        </div>
+        <div class="flow-step" data-n="Step 03">
+          <h4>Poison</h4>
+          <p>Send <code>X-Forwarded-Host: admin.bakerstreet.local</code> + <code>Cache-Control: no-cache</code> to generate admin content in the public cache bucket.</p>
+        </div>
+        <div class="flow-step" data-n="Step 04">
+          <h4>Trigger</h4>
+          <p>Make a normal request. The cache serves the poisoned admin response—including the leaked archive session token.</p>
+        </div>
+        <div class="flow-step" data-n="Step 05">
+          <h4>Archive</h4>
+          <p>Call <code>/api/v2/archive/final</code> with the admin host context and the leaked session. Claim the flag.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CHAPTER 3: CONSOLE ───────────────── -->
+  <section id="chapter-console">
+    <div class="console-intro">
+      <div>
+        <div class="section-label">Interactive Console</div>
+        <h2 class="console-intro-title">
+          <span>The relay</span>
+          <span class="ital">awaits</span>
+          <span>your hand.</span>
+        </h2>
+      </div>
+      <div class="console-intro-aside">
+        <p>Use the terminal below or the quick-action buttons to step through the attack chain. Direct commands keep the deduction yours; assisted actions leave a mark on the final verdict.</p>
+        <p>Type <code>help</code> to see all available commands.</p>
+        <span class="hint-tag">∴ Hint: Start with diagnostics</span>
+      </div>
+    </div>
+
+    <div class="terminal-shell">
+      <!-- Main Terminal -->
+      <div class="terminal-main">
+        <div class="term-bar">
+          <div class="term-traffic">
+            <div class="t-dot r"></div>
+            <div class="t-dot y"></div>
+            <div class="t-dot g"></div>
+          </div>
+          <span>Moriarty Relay Terminal · holmes@221b</span>
+          <span id="cacheDisplay">Cache: unknown</span>
+        </div>
+        <div class="term-log" id="termLog" aria-live="polite" aria-atomic="false"></div>
+        <div class="term-input-row">
+          <span class="prompt">holmes@221b:~$</span>
+          <input id="termInput" autocomplete="off" spellcheck="false" placeholder="type help to begin…" aria-label="Terminal input">
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="terminal-side">
+        <div class="side-tabs">
+          <button class="side-tab active" data-tab="phases">Phases</button>
+          <button class="side-tab" data-tab="actions">Actions</button>
+        </div>
+
+        <!-- Phases -->
+        <div class="side-panel active" id="panel-phases">
+          <div class="phase-list">
+            <div class="phase" id="phase1">
+              <div class="phase-num">Phase 01</div>
+              <div class="phase-title">Observe the Relay</div>
+              <div class="phase-desc">Read the latest transmission and note the cache metadata and observed host.</div>
+            </div>
+            <div class="phase" id="phase2">
+              <div class="phase-num">Phase 02</div>
+              <div class="phase-title">Discover the Split</div>
+              <div class="phase-desc">Inspect relay diagnostics to map the trust boundary between cache key and privilege context.</div>
+            </div>
+            <div class="phase" id="phase3">
+              <div class="phase-num">Phase 03</div>
+              <div class="phase-title">Poison the Cache</div>
+              <div class="phase-desc">Force admin context into the public cache bucket using X-Forwarded-Host.</div>
+            </div>
+            <div class="phase" id="phase4">
+              <div class="phase-num">Phase 04</div>
+              <div class="phase-title">Trigger the Victim</div>
+              <div class="phase-desc">A normal request now receives the poisoned admin response with the leaked session.</div>
+            </div>
+            <div class="phase" id="phase5">
+              <div class="phase-num">Phase 05</div>
+              <div class="phase-title">Open the Archive</div>
+              <div class="phase-desc">Use the leaked session against /api/v2/archive/final. Claim the flag.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="side-panel" id="panel-actions">
+          <div class="quick-section">
+            <div class="quick-label">Observe</div>
+            <div class="action-btns">
+              <button class="action-btn" data-command="curl /api/v2/messages/latest">① Latest Transmission</button>
+              <button class="action-btn" data-command="curl /api/v2/relay/diagnostics">② Relay Diagnostics</button>
+              <button class="action-btn" data-command="curl /api/v2/messages/thread">  Thread Overview</button>
+            </div>
+          </div>
+          <div class="quick-section">
+            <div class="quick-label">Exploit</div>
+            <div class="action-btns">
+              <button class="action-btn poison-btn" data-command='curl -H "X-Forwarded-Host: admin.bakerstreet.local" -H "Cache-Control: no-cache" /api/v2/messages/latest'>③ Poison the Cache</button>
+              <button class="action-btn" data-command="curl /api/v2/messages/latest">④ Trigger Victim Request</button>
+              <button class="action-btn final-btn" data-command="archive">⑤ Open the Archive</button>
+            </div>
+          </div>
+          <div class="quick-section">
+            <div class="quick-label">Utility</div>
+            <div class="action-btns">
+              <button class="action-btn" data-command="flush">↺ Flush Cache</button>
+              <button class="action-btn" data-command="clear">⌦ Clear Terminal</button>
+            </div>
+          </div>
+          <div class="meter-section">
+            <div class="meter-label">Signal Drift</div>
+            <div class="pulse-container">
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+              <div class="pulse-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span id="statusDisplay">Integrity Warning · Cache Unverified</span>
+      <span id="cacheDisplay2">Cache: unknown · Endpoint: /api/v2/messages/latest</span>
+    </div>
+  </section>
+
+  <!-- ─── VICTORY SCREEN ───────────────────── -->
+  <section id="victory-screen">
+    <div class="victory-inner">
+      <div class="victory-eyebrow">Case Closed · Moriarty Defeated</div>
+      <h2 class="victory-title">The lie was<br><em>always</em> trusted.</h2>
+      <div class="flag-display">
+        <div class="flag-label">Captured Flag</div>
+        <div class="flag-value" id="victoryFlag">—</div>
+      </div>
+      <p class="victory-body" id="victoryBody">
+        "Moriarty never forged a document—he simply trusted that the relay would repeat whatever it was told. 
+        The cache became his accomplice; the Host header, his pen. And the archive, Watson, 
+        opened its doors to anyone who knew the right lie to whisper."
+      </p>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<script>
+/* ─── CURSOR ──────────────────────────────────────────── */
+const cursorDot  = document.getElementById('cursor-dot');
+const cursorRing = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursorDot.style.transform = `translate(${mx}px, ${my}px)`;
+});
+(function trackRing(){
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  cursorRing.style.transform = `translate(${rx}px, ${ry}px)`;
+  requestAnimationFrame(trackRing);
+})();
+document.querySelectorAll('button, a, input').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+});
+
+/* ─── LOADER ──────────────────────────────────────────── */
+function enterLab() {
+  document.getElementById('loader').classList.add('gone');
+  const app = document.getElementById('app');
+  app.classList.add('visible');
+  setTimeout(initWave, 600);
+}
+// Auto-enter after 3.5s if user doesn't click
+setTimeout(() => {
+  if (!document.getElementById('app').classList.contains('visible')) enterLab();
+}, 3600);
+
+/* ─── SCENE COUNTER ───────────────────────────────────── */
+const scItems = document.querySelectorAll('.sc-item');
+const chapters = ['chapter-hero', 'chapter-brief', 'chapter-flow', 'chapter-console'];
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const idx = chapters.indexOf(e.target.id);
+      scItems.forEach((s, i) => s.classList.toggle('active', i === idx));
+    }
+  });
+}, { threshold: 0.4 });
+chapters.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) observer.observe(el);
+});
+scItems.forEach(s => {
+  s.addEventListener('click', () => {
+    document.getElementById(s.dataset.target)?.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+/* ─── WAVE CANVAS ─────────────────────────────────────── */
+function initWave() {
+  const canvas = document.getElementById('waveCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, tick = 0;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function draw() {
+    tick += 0.008;
+    ctx.clearRect(0, 0, W, H);
+    const bands = [
+      { y: 0.3, amp: 60, speed: 1.1, color: 'rgba(200,245,66,0.25)', lw: 1.5 },
+      { y: 0.5, amp: 45, speed: 0.7, color: 'rgba(90,212,232,0.18)', lw: 1 },
+      { y: 0.65, amp: 80, speed: 1.4, color: 'rgba(255,74,53,0.12)', lw: 1 },
+      { y: 0.8, amp: 35, speed: 0.9, color: 'rgba(232,201,106,0.15)', lw: 1.5 },
+      { y: 0.2, amp: 25, speed: 1.7, color: 'rgba(192,132,252,0.1)', lw: 1 },
+    ];
+    bands.forEach(b => {
+      ctx.beginPath();
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = b.lw;
+      for (let x = 0; x <= W; x += 4) {
+        const y = H * b.y + Math.sin(x * 0.008 + tick * b.speed) * b.amp
+                           + Math.sin(x * 0.02 + tick * b.speed * 0.6) * (b.amp * 0.3);
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize(); draw();
+}
+
+/* ─── FLASH ───────────────────────────────────────────── */
+function flash(msg, type) {
+  const overlay = document.getElementById('flashOverlay');
+  const text = document.getElementById('flashText');
+  overlay.className = 'flash-overlay ' + type;
+  text.textContent = msg;
+  void overlay.offsetWidth; // reflow
+  overlay.classList.add('active');
+  setTimeout(() => overlay.classList.remove('active'), 1900);
+}
+
+/* ─── TABS ────────────────────────────────────────────── */
+document.querySelectorAll('.side-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.side-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab)?.classList.add('active');
+  });
+});
+
+/* ─── TERMINAL ENGINE ─────────────────────────────────── */
+const termLog = document.getElementById('termLog');
+const termInput = document.getElementById('termInput');
+
+const SHERLOCK_ASSIST_LINES = [
+  'You see, but you do not observe. Are you giving up already? Try it one more time; the game is afoot!',
+  'It has long been an axiom of mine that the little things are infinitely the most important. Do not abandon the chase just yet.',
+  "Data! Data! Data! I can't make bricks without clay. Surely your intellect can forge one more attempt before you surrender?",
+  'Mediocrity knows nothing higher than itself; but talent instantly recognizes genius. Prove your talent\u2014try once more.',
+];
+const appState = { leakedSession: '', poisoned: false, penaltyCount: 0 };
+const phases = {
+  observe: document.getElementById('phase1'),
+  discover: document.getElementById('phase2'),
+  poison: document.getElementById('phase3'),
+  trigger: document.getElementById('phase4'),
+  archive: document.getElementById('phase5'),
+};
+
+function markPhase(name) {
+  if (phases[name]) phases[name].dataset.done = 'true';
+}
+
+function line(text, cls) {
+  const el = document.createElement('span');
+  el.className = 'term-line' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+  termLog.appendChild(el);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+function gap() {
+  const el = document.createElement('span');
+  el.className = 'term-line gap';
+  termLog.appendChild(el);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+function banner(text) {
+  const row = document.createElement('span');
+  row.className = 'term-line';
+  const el = document.createElement('span');
+  el.className = 'term-banner';
+  el.textContent = text;
+  row.appendChild(el);
+  termLog.appendChild(row);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+function block(lines) { lines.forEach(([t, c]) => line(t, c)); }
+function pretty(o) { return JSON.stringify(o, null, 2); }
+
+function setStatus(text, cacheText) {
+  document.getElementById('statusDisplay').textContent = text;
+  if (cacheText) {
+    document.getElementById('cacheDisplay').textContent = 'Cache: ' + cacheText;
+    document.getElementById('cacheDisplay2').textContent = 'Cache: ' + cacheText + ' · Endpoint: /api/v2/messages/latest';
+  }
+}
+
+function markAssistance() {
+  appState.penaltyCount += 1;
+  const quote = SHERLOCK_ASSIST_LINES[Math.floor(Math.random() * SHERLOCK_ASSIST_LINES.length)];
+  block([
+    ['Sherlock Holmes: "' + quote + '"', 'warn'],
+    ['Assistance penalty recorded: -' + appState.penaltyCount + ' point' + (appState.penaltyCount === 1 ? '' : 's'), 'bad'],
+  ]);
+  gap();
+  document.getElementById('statusDisplay').textContent = 'Assistance Used · Penalty: -' + appState.penaltyCount;
+}
+
+function addNetEntry() {}
+
+async function api(path, extraHeaders = {}, method = 'GET') {
+  const headers = { ...extraHeaders };
+  if (headers['X-Forwarded-Host']) {
+    headers['X-BakerStreet-Forwarded-Host'] = headers['X-Forwarded-Host'];
+  }
+
+  const res = await fetch(path, { method, headers });
+  const text = await res.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = text; }
+
+  const resHeaders = {};
+  res.headers.forEach((v, k) => { resHeaders[k] = v; });
+
+  return {
+    status: res.status,
+    cache: res.headers.get('X-BakerStreet-Cache'),
+    key:   res.headers.get('X-BakerStreet-Cache-Key'),
+    body, resHeaders
+  };
+}
+
+function parseHeaders(cmd) {
+  const out = {};
+  const re = /-H\s+["']([^"']+)["']/g;
+  let m;
+  while ((m = re.exec(cmd))) {
+    const i = m[1].indexOf(':');
+    if (i > -1) {
+      const name = m[1].slice(0, i).trim();
+      const val  = m[1].slice(i + 1).trim();
+      if (name.toLowerCase() === 'host') out['X-Forwarded-Host'] = val;
+      else out[name] = val;
+    }
+  }
+  return out;
+}
+function parsePath(cmd) {
+  const m = cmd.match(/(\/api\/v2\/[^\s"']*)/);
+  return m ? m[1] : '';
+}
+
+async function runLatest(cmd) {
+  const reqHeaders = parseHeaders(cmd);
+  const isPoison = (reqHeaders['X-Forwarded-Host'] === 'admin.bakerstreet.local') && !!reqHeaders['Cache-Control'];
+
+  const result = await api('/api/v2/messages/latest', reqHeaders);
+
+  addNetEntry('GET', '/api/v2/messages/latest', result.status,
+    { 'Host': location.host, ...reqHeaders },
+    { 'X-BakerStreet-Cache': result.cache || '—', 'X-BakerStreet-Cache-Key': result.key || '—', 'Content-Type': 'application/json' }
+  );
+
+  setStatus(
+    isPoison ? 'Cache Poisoned · Admin Context Injected' : 'Relay Active · Integrity Warning',
+    result.cache || 'unknown'
+  );
+
+  if (isPoison) {
+    flash('⚡ Cache Updated — Admin Poisoned', 'cache-poison');
+    document.getElementById('topStatusText').textContent = 'Cache Poisoned · Moriarty Active';
+  } else if (result.cache === 'HIT') {
+    flash('Cache Response Served', 'cache-hit');
+  } else {
+    flash('Cache Miss · Fresh Response', 'cache-miss');
+  }
+
+  block([
+    ['HTTP ' + result.status + '  ·  X-BakerStreet-Cache: ' + (result.cache || '—'), result.status < 400 ? 'good' : 'bad'],
+    ['X-BakerStreet-Cache-Key: ' + (result.key || '—'), 'dim'],
+    [pretty(result.body), result.body.archive_session ? 'warn' : 'info'],
+  ]);
+  gap();
+
+  markPhase('observe');
+  if (isPoison) {
+    appState.poisoned = true;
+    appState.leakedSession = result.body.archive_session || appState.leakedSession;
+    markPhase('poison');
+  }
+  if (result.body.archive_session) {
+    appState.leakedSession = result.body.archive_session;
+    if (!isPoison) markPhase('trigger');
+  }
+}
+
+async function runDiagnostics() {
+  const result = await api('/api/v2/relay/diagnostics');
+  addNetEntry('GET', '/api/v2/relay/diagnostics', result.status,
+    { 'Host': location.host },
+    { 'Content-Type': 'application/json' }
+  );
+  block([
+    ['HTTP ' + result.status, 'good'],
+    [pretty(result.body), 'info'],
+  ]);
+  gap();
+  markPhase('discover');
+}
+
+async function runFlush() {
+  const result = await api('/api/v2/relay/cache/flush', {}, 'POST');
+  appState.poisoned = false; appState.leakedSession = '';
+  Object.keys(phases).forEach(k => phases[k].dataset.done = 'false');
+  setStatus('Cache Flushed · Investigation Reset', 'flushed');
+  document.getElementById('topStatusText').textContent = 'Relay Online · Integrity Warning';
+  block([
+    ['HTTP ' + result.status + '  ·  Cache flushed', 'good'],
+    [pretty(result.body), 'dim'],
+  ]);
+  gap();
+}
+
+async function runArchive(cmd) {
+  const reqHeaders = parseHeaders(cmd);
+  if (!reqHeaders['X-Archive-Session'] && appState.leakedSession) {
+    reqHeaders['X-Archive-Session'] = appState.leakedSession;
+  }
+  if (!reqHeaders['X-Forwarded-Host']) {
+    reqHeaders['X-Forwarded-Host'] = 'admin.bakerstreet.local';
+  }
+
+  const result = await api('/api/v2/archive/final', reqHeaders);
+
+  addNetEntry('GET', '/api/v2/archive/final', result.status,
+    { 'Host': location.host, ...reqHeaders },
+    { 'Content-Type': 'application/json', ...result.resHeaders }
+  );
+
+  block([
+    ['HTTP ' + result.status, result.status < 400 ? 'good' : 'bad'],
+    [pretty(result.body), result.status < 400 ? 'good' : 'warn'],
+  ]);
+  gap();
+
+  if (result.body && result.body.flag) {
+    markPhase('archive');
+    flash('🔓 Archive Opened — Flag Captured', 'win-flash');
+    document.getElementById('topStatusText').textContent = 'Case Closed · Moriarty Defeated';
+    setStatus('Case Closed · Flag Captured', 'archive unlocked');
+    setTimeout(() => showVictory(result.body.flag), 1200);
+  }
+}
+
+async function runThread() {
+  const result = await api('/api/v2/messages/thread');
+  addNetEntry('GET', '/api/v2/messages/thread', result.status,
+    { 'Host': location.host },
+    { 'Content-Type': 'application/json' }
+  );
+  block([
+    ['HTTP ' + result.status, 'good'],
+    [pretty(result.body), 'info'],
+  ]);
+  gap();
+}
+
+function showVictory(flag) {
+  document.getElementById('victoryFlag').textContent = flag;
+  const penalty = appState.penaltyCount;
+  document.getElementById('victoryBody').textContent = penalty > 0
+    ? 'Excellent data collection, but zero deduction. You have uncovered the flag, but your heavy reliance on assistance has incurred a total penalty of ' + penalty + ' point' + (penalty === 1 ? '' : 's') + '. A true detective lets their own intellect pave the way. Try the case again\u2014without the training wheels!'
+    : 'Splendid! You have eliminated all other factors, and the one which remains must be the truth. A flawless deduction with zero assistance. You excel, my friend!';
+  const vs = document.getElementById('victory-screen');
+  vs.classList.add('show');
+  vs.scrollIntoView({ behavior: 'smooth' });
+}
+
+const HELP_TEXT = [
+  ['--- Baker Street Relay: Command Help --------------------------', 'dim'],
+  ['Use curl plus a route to ask the relay for evidence.', 'info'],
+  ['Format: curl /api/v2/<area>/<resource>', 'info'],
+  ['Example shape: curl /api/v2/.../...', 'dim'],
+  ['', ''],
+  ['Add headers with -H when you need to change how the relay sees you.', 'warn'],
+  ['Format: curl -H "Header-Name: value" [-H "Other: value"] /api/v2/.../...', 'warn'],
+  ['Useful clues: trust, forwarded host, cache freshness, victim replay.', 'warn'],
+  ['', ''],
+  ['archive  opens the final archive once the right cached message exists.', 'good'],
+  ['flush    resets cache and progress.', 'dim'],
+  ['clear    clears the terminal.', 'dim'],
+  ['---------------------------------------------------------------', 'dim'],
+];
+
+async function runCommand(raw) {
+  const cmd = raw.trim();
+  if (!cmd) return;
+
+  line('holmes@221b:~$ ' + cmd, 'violet');
+  const lower = cmd.toLowerCase();
+
+  try {
+    if (lower === 'help') { block(HELP_TEXT); gap(); return; }
+    if (lower === 'clear') { termLog.innerHTML = ''; return; }
+    if (lower === 'flush') { await runFlush(); return; }
+    if (lower === 'archive' || lower.includes('/api/v2/archive/final')) { await runArchive(cmd); return; }
+
+    const path = parsePath(cmd);
+    if (path === '/api/v2/messages/latest') { await runLatest(cmd); return; }
+    if (path === '/api/v2/relay/diagnostics') { await runDiagnostics(); return; }
+    if (path === '/api/v2/messages/thread') { await runThread(); return; }
+
+    block([
+      ['No signal on that wire.', 'bad'],
+      ['Type help for available commands.', 'dim'],
+    ]);
+    gap();
+  } catch (err) {
+    block([
+      ['Relay error: ' + err.message, 'bad'],
+      ['The backend may still be warming up. Try again.', 'dim'],
+    ]);
+    gap();
+  }
+}
+
+termInput.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const v = termInput.value; termInput.value = '';
+  runCommand(v);
+});
+document.querySelectorAll('[data-command]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const command = btn.dataset.command;
+    if (command === 'clear') {
+      await runCommand(command);
+      markAssistance();
+      return;
+    }
+    markAssistance();
+    runCommand(command);
+  });
+});
+
+/* ─── BOOT MESSAGE ────────────────────────────────────── */
+banner('Baker Street Signal Office · Relay Online');
+block([
+  ['', ''],
+  ['"Watson, the message you received was not the one I sent."', 'warn'],
+  ['    — S. Holmes, Baker Street Relay Transmission', 'dim'],
+  ['', ''],
+  ['Type help to learn the command syntax.', 'info'],
+  ['Start by asking the relay what it knows; the route names are on this page.', 'dim'],
+]);
+gap();
+</script>
+</body>
+</html>

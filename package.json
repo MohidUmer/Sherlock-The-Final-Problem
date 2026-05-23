@@ -1,0 +1,16 @@
+{
+  "name": "final-problem-session-desync",
+  "version": "1.0.0",
+  "description": "Sherlock: The Final Problem - a hard web API lab for cache poisoning, host header injection, and session desync.",
+  "main": "app.js",
+  "scripts": {
+    "dev": "node app.js",
+    "start": "node app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

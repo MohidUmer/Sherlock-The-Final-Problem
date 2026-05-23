@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log*
+.env
+.git
+.github
+server.*.log
+Dockerfile
+docker-compose.yml
+docker-entrypoint.sh

@@ -1,0 +1,8 @@
+services:
+  final-problem:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - FLAG=SHERLOCK{m0r1arty_p01s0n3d_th3_b4k3r_str33t_c4ch3}
